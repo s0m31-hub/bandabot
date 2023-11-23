@@ -1,16 +1,21 @@
 package org.nwolfhub.bandabot.telegram.requests;
 
+import com.pengrad.telegrambot.response.BaseResponse;
+
+import java.util.List;
+
 public class PendingRequest {
-    public Thread thread;
+    public Runnable onResponse;
     public Object request;
     public Class<?> bindsTo;
+    public List<BaseResponse> responses;
 
-    public Thread getThread() {
-        return thread;
+    public Runnable getOnResponse() {
+        return onResponse;
     }
 
-    public PendingRequest setThread(Thread thread) {
-        this.thread = thread;
+    public PendingRequest setOnResponse(Runnable onResponse) {
+        this.onResponse = onResponse;
         return this;
     }
 
@@ -30,5 +35,20 @@ public class PendingRequest {
     public PendingRequest setBindsTo(Class<?> bindsTo) {
         this.bindsTo = bindsTo;
         return this;
+    }
+
+    public List<BaseResponse> getResponses() {
+        return responses;
+    }
+
+    public void setResponses(List<BaseResponse> responses) {
+        this.responses = responses;
+    }
+
+    public PendingRequest(Runnable onResponse, Object request, Class<?> bindsTo, List<BaseResponse> responses) {
+        this.onResponse = onResponse;
+        this.request = request;
+        this.bindsTo = bindsTo;
+        this.responses=responses;
     }
 }
