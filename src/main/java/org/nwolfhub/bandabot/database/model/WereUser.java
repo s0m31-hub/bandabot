@@ -10,7 +10,7 @@ public class WereUser {
     @SequenceGenerator(name = "uid_inc", sequenceName = "clanbot.userid_increaser", allocationSize=1)
     private Integer id;
     private String wereId;
-    private Integer goldDebth;
+    private Integer goldDebt;
 
     public void setId(Integer id) {
         this.id = id;
@@ -20,12 +20,12 @@ public class WereUser {
         return id;
     }
 
-    public Integer getGoldDebth() {
-        return goldDebth;
+    public Integer getGoldDebt() {
+        return goldDebt;
     }
 
-    public WereUser setGoldDebth(Integer goldDebth) {
-        this.goldDebth = goldDebth;
+    public WereUser setGoldDebt(Integer goldDebth) {
+        this.goldDebt = goldDebth;
         return this;
     }
 
@@ -41,7 +41,7 @@ public class WereUser {
     public WereUser(Integer id, String wereId, Integer goldDebth) {
         this.id = id;
         this.wereId = wereId;
-        this.goldDebth = goldDebth;
+        this.goldDebt = goldDebth;
     }
 
     public WereUser() {}
