@@ -17,7 +17,11 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 @org.springframework.context.annotation.Configuration
 @EnableTransactionManagement
@@ -64,6 +68,10 @@ public class Configuration {
     @Bean
     public TelegramBot telegramBot() {
         return new TelegramBot(configurator.getValue("telegram_token"));
+    }
+    @Bean
+    public List<Long> adminsList() {
+        return new ArrayList<>(Arrays.stream(configurator.getValue("admins").split(",")).map(Long::valueOf).toList());
     }
 
     private Properties additionalProperties() {
