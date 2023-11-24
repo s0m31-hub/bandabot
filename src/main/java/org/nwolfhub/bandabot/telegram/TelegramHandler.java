@@ -3,6 +3,7 @@ package org.nwolfhub.bandabot.telegram;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Update;
+import com.pengrad.telegrambot.request.SendMessage;
 import org.nwolfhub.bandabot.database.repositories.DebtRepository;
 import org.nwolfhub.bandabot.database.repositories.QuestRepository;
 import org.nwolfhub.bandabot.database.repositories.UsersRepository;
@@ -10,6 +11,7 @@ import org.nwolfhub.bandabot.telegram.requests.QueueExecutor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -46,8 +48,9 @@ public class TelegramHandler {
             if(update.message().text()!=null) {
                 String text = update.message().text();
                 String command = text.toLowerCase();
+                Long chat = update.message().chat().id();
                 if(command.equals("/start")) {
-                    executor.executeRequest();
+                    executor.executeRequest(new SendMessage(chat, "Успешный запуск"), () -> {}, new ArrayList<>());
                 }
             }
         }

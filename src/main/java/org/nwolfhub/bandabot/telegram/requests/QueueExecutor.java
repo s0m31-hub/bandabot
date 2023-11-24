@@ -31,8 +31,8 @@ public class QueueExecutor {
         running.interrupt();
     }
 
-    public void executeRequest(Class<?> type, Object request, Runnable onResponse, List<BaseResponse> responses) {
-        PendingRequest pending = new PendingRequest(onResponse, request, type, responses);
+    public void executeRequest(Object request, Runnable onResponse, List<BaseResponse> responses) {
+        PendingRequest pending = new PendingRequest(onResponse, request, responses);
         requests.add(pending);
     }
 

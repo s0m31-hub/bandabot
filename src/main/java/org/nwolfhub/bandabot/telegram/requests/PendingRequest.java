@@ -7,7 +7,6 @@ import java.util.List;
 public class PendingRequest {
     public Runnable onResponse;
     public Object request;
-    public Class<?> bindsTo;
     public List<BaseResponse> responses;
 
     public Runnable getOnResponse() {
@@ -28,15 +27,6 @@ public class PendingRequest {
         return this;
     }
 
-    public Class<?> getBindsTo() {
-        return bindsTo;
-    }
-
-    public PendingRequest setBindsTo(Class<?> bindsTo) {
-        this.bindsTo = bindsTo;
-        return this;
-    }
-
     public List<BaseResponse> getResponses() {
         return responses;
     }
@@ -45,10 +35,9 @@ public class PendingRequest {
         this.responses = responses;
     }
 
-    public PendingRequest(Runnable onResponse, Object request, Class<?> bindsTo, List<BaseResponse> responses) {
+    public PendingRequest(Runnable onResponse, Object request, List<BaseResponse> responses) {
         this.onResponse = onResponse;
         this.request = request;
-        this.bindsTo = bindsTo;
         this.responses=responses;
     }
 }
