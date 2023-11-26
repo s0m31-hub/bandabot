@@ -3,6 +3,7 @@ package org.nwolfhub.bandabot.database.model;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name="debtchanges", schema = "clanbot")
 public class DebtChange {
     @Id
     private String id;

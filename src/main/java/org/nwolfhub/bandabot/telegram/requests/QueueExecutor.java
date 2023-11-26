@@ -1,16 +1,14 @@
 package org.nwolfhub.bandabot.telegram.requests;
 
 import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.request.AbstractSendRequest;
-import com.pengrad.telegrambot.request.BaseRequest;
 import com.pengrad.telegrambot.request.SendMessage;
-import com.pengrad.telegrambot.response.BaseResponse;
+import com.pengrad.telegrambot.response.SendResponse;
 import jakarta.annotation.PreDestroy;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.ArrayDeque;
+import java.util.List;
+import java.util.Queue;
 
 @Component
 public class QueueExecutor {
@@ -31,7 +29,7 @@ public class QueueExecutor {
         running.interrupt();
     }
 
-    public void executeRequest(Object request, Runnable onResponse, List<BaseResponse> responses) {
+    public void executeRequest(SendMessage request, Runnable onResponse, List<SendResponse> responses) {
         PendingRequest pending = new PendingRequest(onResponse, request, responses);
         requests.add(pending);
     }
@@ -41,7 +39,7 @@ public class QueueExecutor {
             while (true) {
                 if(!requests.isEmpty()) {
                     PendingRequest taken = requests.poll();
-                    BaseResponse response = bot.execute((BaseRequest<AbstractSendRequest, BaseResponse>) taken.request);
+                    SendResponse response = bot.execute(taken.request);
                     if(!response.isOk() && response.errorCode()==429) {
                         requests.add(taken);
                         try {

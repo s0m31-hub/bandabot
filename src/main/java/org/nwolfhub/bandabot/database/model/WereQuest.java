@@ -1,13 +1,11 @@
 package org.nwolfhub.bandabot.database.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.*;
 
 import java.util.List;
 
 @Entity
+@Table(name="werequests", schema = "clanbot")
 public class WereQuest {
     @Id
     private String id;
