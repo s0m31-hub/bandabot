@@ -4,6 +4,7 @@ import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.request.SendMessage;
+import jakarta.annotation.PreDestroy;
 import org.nwolfhub.bandabot.database.repositories.DebtRepository;
 import org.nwolfhub.bandabot.database.repositories.QuestRepository;
 import org.nwolfhub.bandabot.database.repositories.UsersRepository;
@@ -31,16 +32,16 @@ public class TelegramHandler {
         this.usersRepository = usersRepository;
         this.questRepository = questRepository;
         this.executor = executor;
-        bot.setUpdatesListener(new UpdatesListener() {
-            @Override
-            public int process(List<Update> list) {
-                for(Update update:list) {
-                    onUpdate(update);
-                }
-                return CONFIRMED_UPDATES_ALL;
-            }
-        });
         this.admins = admins;
+    }
+
+    public void startListening() {
+        bot.setUpdatesListener(list -> {
+            for (Update update : list) {
+                onUpdate(update);
+            }
+            return UpdatesListener.CONFIRMED_UPDATES_ALL;
+        });
     }
 
     private void onUpdate(Update update) {

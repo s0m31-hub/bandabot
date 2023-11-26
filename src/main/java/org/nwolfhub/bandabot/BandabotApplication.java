@@ -12,6 +12,7 @@ public class BandabotApplication {
 		SpringApplication.run(BandabotApplication.class, args);
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Configuration.class);
 		TelegramHandler handler = context.getBean(TelegramHandler.class);
+		handler.startListening();
 	}
 
 }
