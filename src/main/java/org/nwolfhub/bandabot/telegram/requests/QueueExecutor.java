@@ -2,6 +2,7 @@ package org.nwolfhub.bandabot.telegram.requests;
 
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.request.SendPhoto;
 import com.pengrad.telegrambot.response.SendResponse;
 import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Component;
@@ -13,12 +14,14 @@ import java.util.Queue;
 @Component
 public class QueueExecutor {
     private final TelegramBot bot;
+    public final Long mainChat;
     private final Queue<PendingRequest> requests = new ArrayDeque<>();
     private Thread running;
 
 
-    public QueueExecutor(TelegramBot bot) {
+    public QueueExecutor(TelegramBot bot, Long mainChat) {
         this.bot = bot;
+        this.mainChat = mainChat;
         running = senderThread();
         running.start();
     }
@@ -29,10 +32,14 @@ public class QueueExecutor {
         running.interrupt();
     }
 
-    public void executeRequest(SendMessage request, Runnable onResponse, List<SendResponse> responses) {
+    public void executeRequestNoQueue(SendMessage request, Runnable onResponse, List<SendResponse> responses) {
         PendingRequest pending = new PendingRequest(onResponse, request, responses);
         requests.add(pending);
     }
+    public void executeRequestNoQueue(SendPhoto request) {
+        bot.execute(request);
+    }
+
 
     private Thread senderThread() {
         return new Thread(() -> {

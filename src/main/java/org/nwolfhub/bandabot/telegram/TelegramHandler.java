@@ -41,7 +41,7 @@ public class TelegramHandler {
                 String command = text.toLowerCase();
                 Long chat = update.message().chat().id();
                 if(command.equals("/start")) {
-                    executor.executeRequest(new SendMessage(chat, "Успешный запуск"), () -> {}, new ArrayList<>());
+                    executor.executeRequestNoQueue(new SendMessage(chat, "Успешный запуск"), () -> {}, new ArrayList<>());
                 }
             }
         }

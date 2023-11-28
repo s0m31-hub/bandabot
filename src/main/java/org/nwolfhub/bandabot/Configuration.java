@@ -27,7 +27,7 @@ import java.util.Properties;
 @org.springframework.context.annotation.Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories("org.nwolfhub.bandabot.database")
-@ComponentScan(basePackages = {"org.nwolfhub.bandabot.database", "org.nwolfhub.bandabot.telegram"})
+@ComponentScan(basePackages = {"org.nwolfhub.bandabot.database", "org.nwolfhub.bandabot.telegram", "org.nwolfhub.bandabot.wolvesville"})
 public class Configuration {
     private final Configurator configurator = new Configurator(new File("banda.cfg"));
 
@@ -76,6 +76,10 @@ public class Configuration {
     @Bean
     public ClanData clanData() {
         return new ClanData().setWereclan(configurator.getValue("wereclan")).setWeretoken(configurator.getValue("weretoken"));
+    }
+    @Bean
+    public Long mainChat() {
+        return Long.valueOf(configurator.getValue("main_chat"));
     }
 
     private Properties additionalProperties() {

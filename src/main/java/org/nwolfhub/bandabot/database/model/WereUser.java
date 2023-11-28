@@ -1,11 +1,13 @@
 package org.nwolfhub.bandabot.database.model;
 
 import jakarta.persistence.*;
+import jakarta.transaction.Transactional;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Entity
 @Table(name="wereusers", schema = "clanbot")
+@Transactional
 public class WereUser {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO, generator = "uid_inc")

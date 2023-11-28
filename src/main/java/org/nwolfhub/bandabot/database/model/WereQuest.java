@@ -1,15 +1,19 @@
 package org.nwolfhub.bandabot.database.model;
 
 import jakarta.persistence.*;
+import jakarta.transaction.Transactional;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import java.util.List;
 
 @Entity
 @Table(name="werequests", schema = "clanbot")
+@Transactional
 public class WereQuest {
     @Id
     private String id;
-    @OneToMany
+    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "participants")
     private List<WereUser> participants;
     private String previewUrl;
