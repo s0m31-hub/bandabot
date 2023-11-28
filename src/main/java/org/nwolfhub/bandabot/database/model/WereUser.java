@@ -1,6 +1,8 @@
 package org.nwolfhub.bandabot.database.model;
 
 import jakarta.persistence.*;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @Entity
 @Table(name="wereusers", schema = "clanbot")
@@ -9,8 +11,14 @@ public class WereUser {
     @GeneratedValue(strategy = GenerationType.AUTO, generator = "uid_inc")
     @SequenceGenerator(name = "uid_inc", sequenceName = "clanbot.userid_increaser", allocationSize=1)
     private Integer id;
+    @Column(nullable = false)
     private String wereId;
-    private Integer goldDebt;
+    @Column(nullable = false)
+    public String username;
+    @Column(nullable = false)
+    private Integer goldDebt = 0;
+    @Column(nullable = true)
+    private Long telegramId;
 
     public void setId(Integer id) {
         this.id = id;
@@ -38,10 +46,34 @@ public class WereUser {
         return this;
     }
 
-    public WereUser(Integer id, String wereId, Integer goldDebth) {
+    public Long getTelegramId() {
+        return telegramId;
+    }
+
+    public WereUser setTelegramId(Long telegramId) {
+        this.telegramId = telegramId;
+        return this;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public WereUser setUsername(String username) {
+        this.username = username;
+        return this;
+    }
+    public WereUser addDebt(Integer debt) {
+        this.goldDebt = goldDebt+debt;
+        return this;
+    }
+
+    public WereUser(Integer id, String wereId, Integer goldDebt, String username, Long telegramId) {
         this.id = id;
         this.wereId = wereId;
-        this.goldDebt = goldDebth;
+        this.goldDebt = goldDebt;
+        this.telegramId = telegramId;
+        this.username = username;
     }
 
     public WereUser() {}

@@ -14,5 +14,4 @@ public class BandabotApplication {
 		TelegramHandler handler = context.getBean(TelegramHandler.class);
 		handler.startListening();
 	}
-
 }

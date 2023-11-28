@@ -10,5 +10,7 @@ import java.util.List;
 public interface UsersRepository extends CrudRepository<WereUser, Integer> {
     WereUser getWereUserByWereId(String wereId);
     List<WereUser> getWereUsersByGoldDebtGreaterThanEqual(Integer goldDebt);
-
+    List<WereUser> getAllByWereIdIn(List<String> wereids);
+    WereUser getById(Integer id);
+    WereUser getByTelegramId(Long telegramId);
 }

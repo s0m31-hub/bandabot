@@ -14,8 +14,9 @@ public class WereQuest {
     private List<WereUser> participants;
     private String previewUrl;
 
-    public void setId(String id) {
+    public WereQuest setId(String id) {
         this.id = id;
+        return this;
     }
 
     public String getId() {
