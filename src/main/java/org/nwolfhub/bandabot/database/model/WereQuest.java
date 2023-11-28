@@ -13,11 +13,10 @@ import java.util.List;
 public class WereQuest {
     @Id
     private String id;
-    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinColumn(name = "participants")
     private List<WereUser> participants;
     private String previewUrl;
-
     public WereQuest setId(String id) {
         this.id = id;
         return this;

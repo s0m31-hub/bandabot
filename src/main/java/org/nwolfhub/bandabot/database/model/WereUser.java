@@ -2,8 +2,8 @@ package org.nwolfhub.bandabot.database.model;
 
 import jakarta.persistence.*;
 import jakarta.transaction.Transactional;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 @Entity
 @Table(name="wereusers", schema = "clanbot")
@@ -21,6 +21,8 @@ public class WereUser {
     private Integer goldDebt = 0;
     @Column(nullable = true)
     private Long telegramId;
+    @ManyToMany(mappedBy = "id")
+    private List<WereQuest> participatedIn;
 
     public void setId(Integer id) {
         this.id = id;
@@ -70,12 +72,22 @@ public class WereUser {
         return this;
     }
 
-    public WereUser(Integer id, String wereId, Integer goldDebt, String username, Long telegramId) {
+    public List<WereQuest> getParticipatedIn() {
+        return participatedIn;
+    }
+
+    public WereUser setParticipatedIn(List<WereQuest> participatedIn) {
+        this.participatedIn = participatedIn;
+        return this;
+    }
+
+    public WereUser(Integer id, String wereId, Integer goldDebt, String username, Long telegramId, List<WereQuest> participatedIn) {
         this.id = id;
         this.wereId = wereId;
         this.goldDebt = goldDebt;
         this.telegramId = telegramId;
         this.username = username;
+        this.participatedIn = participatedIn;
     }
 
     public WereUser() {}
