@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.transaction.Transactional;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
@@ -13,8 +14,10 @@ import java.util.List;
 public class WereQuest {
     @Id
     private String id;
+    @NotNull
+    @JoinColumn(nullable = false)
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinColumn(name = "participants")
+
     private List<WereUser> participants;
     private String previewUrl;
     public WereQuest setId(String id) {

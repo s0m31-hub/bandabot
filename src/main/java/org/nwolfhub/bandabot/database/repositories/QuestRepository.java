@@ -15,6 +15,4 @@ import java.util.Optional;
 public interface QuestRepository extends CrudRepository<WereQuest, String> {
     List<WereQuest> getAllByParticipantsContaining(WereUser user);
     WereQuest getById(String id);
-    @NotNull
-    Optional<WereQuest> findById(@NotNull String id);
 }
