@@ -12,7 +12,9 @@ import java.util.Optional;
 
 @Component
 @Transactional
-public interface QuestRepository extends CrudRepository<WereQuest, String> {
+public interface QuestRepository extends CrudRepository<WereQuest, Integer> {
     List<WereQuest> getAllByParticipantsContaining(WereUser user);
-    WereQuest getById(String id);
+    WereQuest getByInnerId(Integer id);
+    WereQuest getByWereId(String wereId);
+
 }

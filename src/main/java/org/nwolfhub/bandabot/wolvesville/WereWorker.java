@@ -83,15 +83,15 @@ public class WereWorker {
             JsonElement questElement = JsonParser.parseString(response);
             JsonObject questObject = questElement.getAsJsonObject();
             JsonObject quest = questObject.get("quest").getAsJsonObject();
-            WereQuest inDB = questRepository.getById(quest.get("id").getAsString());
+            WereQuest inDB = questRepository.getByWereId(quest.get("id").getAsString());
             if(inDB==null) {
                 executor.executeRequestNoQueue(new SendPhoto(executor.mainChat, quest.get("promoImageUrl").getAsString()).caption("Мы начали новый квест!\n\nПрошу всех участников внести 600 золота в казну. Так же напоминаю про норму в 4500 опыта"));
                 HashMap<WereUser, Integer> participants = getQuestParticipants(questElement);
-                WereQuest newQuest = new WereQuest().setId(quest.get("id").getAsString()).setParticipants(participants.keySet().stream().toList()).setPreviewUrl(quest.get("promoImageUrl").getAsString());
+                WereQuest newQuest = new WereQuest().setWereId(quest.get("id").getAsString()).setParticipants(participants.keySet().stream().toList()).setPreviewUrl(quest.get("promoImageUrl").getAsString());
                 participants.keySet().forEach(e -> e.addDebt(600));
-                //usersRepository.saveAll(participants.keySet());
+                usersRepository.saveAll(participants.keySet());
                 questRepository.save(newQuest);
-                System.out.println("Updated quest " + newQuest.getId());
+                System.out.println("Updated quest " + newQuest.getWereId());
             }
         }
     }
@@ -111,22 +111,22 @@ public class WereWorker {
                 JsonObject quest = questObject.get("quest").getAsJsonObject();
                 WereQuest inDB;
                 try {
-                     inDB = questRepository.getById(quest.get("id").getAsString());
+                     inDB = questRepository.getByWereId(quest.get("id").getAsString());
                      new PrintWriter(new PrintStream(OutputStream.nullOutputStream())).println(inDB); //does nothing? Ha-ha, useful as fuck!
                 } catch (EntityNotFoundException e) {
                     inDB = null;
                 }
                 if(inDB==null) {
                     HashMap<WereUser, Integer> participants = getQuestParticipants(questElement);
-                    WereQuest newQuest = new WereQuest().setId(quest.get("id").getAsString()).setParticipants(participants.keySet().stream().toList()).setPreviewUrl(quest.get("promoImageUrl").getAsString());
+                    WereQuest newQuest = new WereQuest().setWereId(quest.get("id").getAsString()).setParticipants(participants.keySet().stream().toList()).setPreviewUrl(quest.get("promoImageUrl").getAsString());
                     participants.keySet().forEach(e -> e.addDebt(600));
                     for(WereUser participant:participants.keySet()) {
                         int debtMultiplier = participants.get(participant)/1000;
                         participant.addDebt(debtMultiplier*100);
                     }
-                    //usersRepository.saveAll(participants.keySet());
+                    usersRepository.saveAll(participants.keySet());
                     questRepository.save(newQuest);
-                    System.out.println("Updated quest " + newQuest.getId());
+                    System.out.println("Updated quest " + newQuest.getWereId());
                 }
             }
         }

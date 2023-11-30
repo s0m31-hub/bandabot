@@ -2,8 +2,6 @@ package org.nwolfhub.bandabot.database.model;
 
 import jakarta.persistence.*;
 import jakarta.transaction.Transactional;
-import org.hibernate.annotations.NotFound;
-import org.hibernate.annotations.NotFoundAction;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -13,20 +11,23 @@ import java.util.List;
 @Transactional
 public class WereQuest {
     @Id
-    private String id;
-    @NotNull
-    @JoinColumn(nullable = false)
-    @ManyToMany(fetch = FetchType.LAZY)
+    @GeneratedValue(strategy = GenerationType.AUTO, generator = "quest_inc")
+    @SequenceGenerator(name = "quest_inc", sequenceName = "clanbot.questid_increaser", allocationSize=1)
+    private Integer innerId;
 
+    private String wereId;
+    @NotNull
+    @JoinColumn(name = "participants")
+    @ManyToMany(fetch = FetchType.LAZY)
     private List<WereUser> participants;
     private String previewUrl;
-    public WereQuest setId(String id) {
-        this.id = id;
+    public WereQuest setWereId(String id) {
+        this.wereId = id;
         return this;
     }
 
-    public String getId() {
-        return id;
+    public String getWereId() {
+        return wereId;
     }
 
     public List<WereUser> getParticipants() {
@@ -47,10 +48,20 @@ public class WereQuest {
         return this;
     }
 
+    public Integer getInnerId() {
+        return innerId;
+    }
+
+    public WereQuest setInnerId(Integer innerId) {
+        this.innerId = innerId;
+        return this;
+    }
+
     public WereQuest() {}
 
-    public WereQuest(String id, List<WereUser> participants, String previewUrl) {
-        this.id = id;
+    public WereQuest(Integer innerid, String wereid, List<WereUser> participants, String previewUrl) {
+        this.innerId = innerid;
+        this.wereId = wereid;
         this.participants = participants;
         this.previewUrl = previewUrl;
     }
