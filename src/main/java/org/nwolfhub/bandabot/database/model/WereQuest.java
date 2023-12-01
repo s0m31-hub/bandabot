@@ -17,7 +17,7 @@ public class WereQuest {
 
     private String wereId;
     @NotNull
-    @JoinColumn(name = "participants")
+    @JoinTable(name = "clanbot.map_that_leads_to_you", joinColumns = @JoinColumn(name = "innerid"), inverseJoinColumns = @JoinColumn(name = "id"))
     @ManyToMany(fetch = FetchType.LAZY)
     private List<WereUser> participants;
     private String previewUrl;
