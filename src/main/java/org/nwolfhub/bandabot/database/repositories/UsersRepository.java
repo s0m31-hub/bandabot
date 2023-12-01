@@ -10,7 +10,7 @@ import java.util.List;
 @Component
 @Transactional
 public interface UsersRepository extends CrudRepository<WereUser, Integer> {
-    WereUser getWereUserByWereId(String wereId);
+    WereUser getByWereId(String wereId);
     List<WereUser> getWereUsersByGoldDebtGreaterThanEqual(Integer goldDebt);
     List<WereUser> getAllByWereIdIn(List<String> wereids);
     WereUser getById(Integer id);

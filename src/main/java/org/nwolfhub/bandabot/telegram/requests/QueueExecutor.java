@@ -32,9 +32,9 @@ public class QueueExecutor {
         running.interrupt();
     }
 
-    public void executeRequestNoQueue(SendMessage request, Runnable onResponse, List<SendResponse> responses) {
+    public void executeRequest(SendMessage request, Runnable onResponse, List<SendResponse> responses) {
         PendingRequest pending = new PendingRequest(onResponse, request, responses);
-        requests.add(pending);
+        requests.offer(pending);
     }
     public void executeRequestNoQueue(SendPhoto request) {
         bot.execute(request);
@@ -48,15 +48,16 @@ public class QueueExecutor {
                     PendingRequest taken = requests.poll();
                     SendResponse response = bot.execute(taken.request);
                     if(!response.isOk() && response.errorCode()==429) {
-                        requests.add(taken);
+                        requests.offer(taken);
                         try {
                             Thread.sleep(100);
                         } catch (InterruptedException e) {
                             throw new RuntimeException(e);
                         }
+                    } else {
+                        taken.setResponses(List.of(response));
+                        taken.onResponse.run();
                     }
-                    taken.setResponses(List.of(response));
-                    taken.onResponse.run();
                 } else {
                     try {
                         Thread.sleep(500);

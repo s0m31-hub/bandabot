@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.List;
 
@@ -110,12 +111,15 @@ public class WereWorker {
                 JsonObject questObject = questElement.getAsJsonObject();
                 JsonObject quest = questObject.get("quest").getAsJsonObject();
                 WereQuest inDB;
+                inDB = questRepository.getByWereId(quest.get("id").getAsString());
+                /*
                 try {
-                     inDB = questRepository.getByWereId(quest.get("id").getAsString());
+
                      new PrintWriter(new PrintStream(OutputStream.nullOutputStream())).println(inDB); //does nothing? Ha-ha, useful as fuck!
                 } catch (EntityNotFoundException e) {
                     inDB = null;
                 }
+                 */
                 if(inDB==null) {
                     HashMap<WereUser, Integer> participants = getQuestParticipants(questElement);
                     WereQuest newQuest = new WereQuest().setWereId(quest.get("id").getAsString()).setParticipants(participants.keySet().stream().toList()).setPreviewUrl(quest.get("promoImageUrl").getAsString());
