@@ -19,10 +19,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 
 @org.springframework.context.annotation.Configuration
 @EnableTransactionManagement
@@ -30,6 +27,7 @@ import java.util.Properties;
 @ComponentScan(basePackages = {"org.nwolfhub.bandabot.database", "org.nwolfhub.bandabot.telegram", "org.nwolfhub.bandabot.wolvesville"})
 public class Configuration {
     private final Configurator configurator = new Configurator(new File("banda.cfg"));
+    private final HashMap<String, Long> bindMap = new HashMap<>();
 
     @Bean
     public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
@@ -81,6 +79,10 @@ public class Configuration {
     public Long mainChat() {
         return Long.valueOf(configurator.getValue("main_chat"));
     }
+    @Bean
+    public HashMap<String, Long> getBindCodes() {
+        return bindMap;
+    };
 
     private Properties additionalProperties() {
         Properties properties = new Properties();

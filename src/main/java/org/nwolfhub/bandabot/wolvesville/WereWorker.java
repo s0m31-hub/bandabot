@@ -4,9 +4,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.request.SendPhoto;
 import jakarta.annotation.PreDestroy;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -20,10 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -35,13 +32,16 @@ public class WereWorker {
     private volatile OkHttpClient client;
     private static final String baseUrl = "https://api.wolvesville.com";
     private ClanData data;
+    private final HashMap<String, Long> bindCodes;
 
     @Autowired
     private QueueExecutor executor;
 
-    public WereWorker(UsersRepository usersRepository, QuestRepository questRepository, ClanData data) {
+
+    public WereWorker(UsersRepository usersRepository, QuestRepository questRepository, ClanData data, HashMap<String, Long> bindCodes) {
         this.usersRepository = usersRepository;
         this.questRepository = questRepository;
+        this.bindCodes = bindCodes;
         this.client = new OkHttpClient();
         this.data = data;
     }
@@ -61,8 +61,9 @@ public class WereWorker {
         while (client != null) {
             Thread.onSpinWait();
             try {
+                getChatMessages();
                 updateCurrentQuest();
-                Thread.sleep(30000);
+                Thread.sleep(10000);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             } catch (IOException e) {
@@ -112,14 +113,6 @@ public class WereWorker {
                 JsonObject quest = questObject.get("quest").getAsJsonObject();
                 WereQuest inDB;
                 inDB = questRepository.getByWereId(quest.get("id").getAsString());
-                /*
-                try {
-
-                     new PrintWriter(new PrintStream(OutputStream.nullOutputStream())).println(inDB); //does nothing? Ha-ha, useful as fuck!
-                } catch (EntityNotFoundException e) {
-                    inDB = null;
-                }
-                 */
                 if(inDB==null) {
                     HashMap<WereUser, Integer> participants = getQuestParticipants(questElement);
                     WereQuest newQuest = new WereQuest().setWereId(quest.get("id").getAsString()).setParticipants(participants.keySet().stream().toList()).setPreviewUrl(quest.get("promoImageUrl").getAsString());
@@ -164,6 +157,48 @@ public class WereWorker {
             finalMap.put(user, listOfIds.get(user.getWereId()));
         }
         return finalMap;
+    }
+
+    private void getChatMessages() throws IOException {
+        Response response = client.newCall(new Request.Builder().url(baseUrl + "/clans/" + data.getWereclan() + "/chat").get().addHeader("Authorization", getToken()).build()).execute();
+        if(response.isSuccessful()) {
+            String body = response.body().string();
+            response.close();
+            JsonArray messages = JsonParser.parseString(body).getAsJsonArray();
+            for(int i = messages.size()-1; i>=0; i--) {
+                JsonElement messageElement = messages.get(i);
+                JsonObject message = messageElement.getAsJsonObject();
+                if(message.has("playerId") && message.has("msg") && !message.get("isSystem").getAsBoolean()) {
+                    String from = message.get("playerId").getAsString();
+                    String text = message.get("msg").getAsString();
+                    if(text.length()==4) {
+                        String code = text.toUpperCase();
+                        if(bindCodes.containsKey(code)) {
+                            Long author = bindCodes.get(code);
+                            WereUser wereUser = usersRepository.getByWereId(from);
+                            if(wereUser==null) {
+                                executor.executeRequest(new SendMessage(from, "Ты ещё не участвовал в квестах! Регистрация займёт чуть больше времени :)"));
+                                wereUser = new WereUser().setWereId(from).setGoldDebt(0);
+                                Response userGetResponse = client.newCall(new Request.Builder().url(baseUrl + "/players/" + from).addHeader("Authorization", getToken()).build()).execute();
+                                if(userGetResponse.isSuccessful()) {
+                                    String body1 = userGetResponse.body().string();
+                                    userGetResponse.close();
+                                    String username = JsonParser.parseString(body1).getAsJsonObject().get("username").getAsString();
+                                    wereUser.setUsername(username);
+                                } else {
+                                    executor.executeRequest(new SendMessage(from, "Не удалось получить информацию о твоём профиле :(\n\nНе отправляй новый код, я попробую ещё раз через время!"));
+                                    continue;
+                                }
+                            }
+                            bindCodes.remove(code);
+                            wereUser.setTelegramId(author);
+                            usersRepository.save(wereUser);
+                            executor.executeRequest(new SendMessage(author, "Добро пожаловать, " + wereUser.getUsername() + "!"));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private String getToken() {

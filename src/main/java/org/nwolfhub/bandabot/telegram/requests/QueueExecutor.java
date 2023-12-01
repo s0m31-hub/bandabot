@@ -1,6 +1,7 @@
 package org.nwolfhub.bandabot.telegram.requests;
 
 import com.pengrad.telegrambot.TelegramBot;
+import com.pengrad.telegrambot.request.AnswerCallbackQuery;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.request.SendPhoto;
 import com.pengrad.telegrambot.response.SendResponse;
@@ -8,6 +9,7 @@ import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 
@@ -36,9 +38,18 @@ public class QueueExecutor {
         PendingRequest pending = new PendingRequest(onResponse, request, responses);
         requests.offer(pending);
     }
+    public void executeRequest(SendMessage request) {
+        PendingRequest pending = new PendingRequest(() -> {}, request, new ArrayList<>());
+        requests.offer(pending);
+    }
+
     public void executeRequestNoQueue(SendPhoto request) {
         bot.execute(request);
     }
+    public void executeRequestNoQueue(AnswerCallbackQuery request) {
+        bot.execute(request);
+    }
+
 
 
     private Thread senderThread() {
