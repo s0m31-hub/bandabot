@@ -130,6 +130,7 @@ public class WereWorker {
                 }
             }
         }
+        System.out.println("Resolved quests");
     }
 
     private HashMap<WereUser, Integer> getQuestParticipants(JsonElement quest) {
