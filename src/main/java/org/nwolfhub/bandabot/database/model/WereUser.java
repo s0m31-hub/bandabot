@@ -2,6 +2,7 @@ package org.nwolfhub.bandabot.database.model;
 
 import jakarta.persistence.*;
 import jakarta.transaction.Transactional;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.util.List;
 
@@ -19,9 +20,14 @@ public class WereUser {
     public String username;
     @Column(nullable = false)
     private Integer goldDebt = 0;
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private Integer freeGems = 0;
     @Column(nullable = true)
     private Long telegramId;
-
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private Boolean inClan = false;
     public void setId(Integer id) {
         this.id = id;
     }
@@ -70,13 +76,38 @@ public class WereUser {
         return this;
     }
 
-    public WereUser(Integer id, String wereId, Integer goldDebt, String username, Long telegramId) {
+    public Boolean getInClan() {
+        return inClan;
+    }
+
+    public WereUser setInClan(Boolean inClan) {
+        this.inClan = inClan;
+        return this;
+    }
+
+    public WereUser addGems(Integer amount) {
+        this.freeGems+=amount;
+        return this;
+    }
+
+    public WereUser(Integer id, String wereId, Integer goldDebt, String username, Long telegramId, Integer freeGems, Boolean inClan) {
         this.id = id;
         this.wereId = wereId;
         this.goldDebt = goldDebt;
         this.telegramId = telegramId;
         this.username = username;
+        this.freeGems = freeGems;
+        this.inClan = inClan;
     }
 
     public WereUser() {}
+
+    public Integer getFreeGems() {
+        return freeGems;
+    }
+
+    public WereUser setFreeGems(Integer freeGems) {
+        this.freeGems = freeGems;
+        return this;
+    }
 }

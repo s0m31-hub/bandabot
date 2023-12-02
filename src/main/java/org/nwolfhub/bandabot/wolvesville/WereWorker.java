@@ -19,6 +19,9 @@ import org.nwolfhub.bandabot.telegram.requests.QueueExecutor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,6 +36,9 @@ public class WereWorker {
     private static final String baseUrl = "https://api.wolvesville.com";
     private ClanData data;
     private final HashMap<String, Long> bindCodes;
+
+    private final File ledgerInfoFile = new File("ledger.txt");
+    private String ledgerInfo;
 
     @Autowired
     private QueueExecutor executor;
@@ -53,20 +59,30 @@ public class WereWorker {
     }
 
     public void launch() throws IOException {
+        if(!ledgerInfoFile.exists()) {
+            ledgerInfoFile.createNewFile();
+            ledgerInfo = "";
+        } else {
+            try (FileInputStream in = new FileInputStream(ledgerInfoFile)) {
+                ledgerInfo = new String(in.readAllBytes());
+            }
+        }
         updateHistory();
         new Thread(this::workerThread).start();
     }
-
     private void workerThread() {
         while (client != null) {
             Thread.onSpinWait();
             try {
                 getChatMessages();
                 updateCurrentQuest();
+                updateClanMembers();
+                updateLedger();
+                exportLedger();
                 Thread.sleep(10000);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
@@ -198,6 +214,83 @@ public class WereWorker {
                     }
                 }
             }
+        } else {
+            response.close();
+        }
+    }
+
+    private void exportLedger() throws IOException {
+        try(FileOutputStream outputStream = new FileOutputStream(ledgerInfoFile)) {
+            outputStream.write(ledgerInfo.getBytes());
+        }
+    }
+
+    private void updateLedger() throws IOException {
+        Response response = client.newCall(new Request.Builder().url(baseUrl + "/clans/" + data.getWereclan() + "/chat").get().addHeader("Authorization", getToken()).build()).execute();
+        if(response.isSuccessful()) {
+            String body = response.body().string();
+            response.close();
+            JsonArray ledgerLogs = JsonParser.parseString(body).getAsJsonArray();
+            String last = null;
+            for(JsonElement ledgerElement:ledgerLogs) {
+                JsonObject ledgerObject = ledgerElement.getAsJsonObject();
+                if(last==null) {
+                    last = ledgerObject.get("id").getAsString();
+                    ledgerInfo = last;
+                }
+                if(ledgerObject.has("playerId")) {
+                    String id = ledgerObject.get("playerId").getAsString();
+                    Integer gold = ledgerObject.get("gold").getAsInt();
+                    Integer gems = ledgerObject.get("gems").getAsInt();
+                    WereUser toModify = usersRepository.getByWereId(id);
+                    if(toModify==null) {
+                        toModify = new WereUser();
+                        toModify.setWereId(id).setUsername(ledgerObject.get("username").getAsString()).setGoldDebt(0);
+                    }
+                    toModify.addGems(gems).addDebt(-1*gold);
+                    usersRepository.save(toModify);
+                }
+            }
+        } else {
+            response.close();
+        }
+    }
+
+    private void updateClanMembers() throws IOException {
+        Response response = client.newCall(new Request.Builder().url(baseUrl + "/clans/" + data.getWereclan() + "/members").get().addHeader("Authorization", getToken()).build()).execute();
+        if(response.isSuccessful()) {
+            String body = response.body().string();
+            response.close();
+            JsonArray members = JsonParser.parseString(body).getAsJsonArray();
+            for(JsonElement memberElement:members) {
+                JsonObject member = memberElement.getAsJsonObject();
+                String status = member.get("status").getAsString();
+                if(status.equals("ACCEPTED")) {
+                    String id = member.get("playerId").getAsString();
+                    WereUser user = usersRepository.getByWereId(id);
+                    if(user==null) {
+                        user = new WereUser();
+                        user.setWereId(id).setUsername(member.get("username").getAsString()).setGoldDebt(0);
+                    }
+                    if(!user.getInClan()) {
+                        user.setInClan(true);
+                        usersRepository.save(user);
+                    }
+                } else {
+                    String id = member.get("playerId").getAsString();
+                    WereUser user = usersRepository.getByWereId(id);
+                    if(user==null) {
+                        user = new WereUser();
+                        user.setWereId(id).setInClan(true).setUsername(member.get("username").getAsString()).setGoldDebt(0);
+                    }
+                    if(user.getInClan()) {
+                        user.setInClan(false);
+                        usersRepository.save(user);
+                    }
+                }
+            }
+        } else {
+            response.close();
         }
     }
 

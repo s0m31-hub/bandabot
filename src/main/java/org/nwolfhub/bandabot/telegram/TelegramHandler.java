@@ -58,16 +58,14 @@ public class TelegramHandler {
                 Long from = update.message().from().id();
                 if (from.equals(chat)) {
                     if (command.equals("/start")) {
-                        executor.executeRequest(new SendMessage(from, "Добро пожаловать в банду! Здесь ты можешь управлять своими долгами, а так же смотреть за их списком в нашем клане").replyMarkup(new ReplyKeyboardMarkup("Меню").resizeKeyboard(true)), () -> {
-                        }, new ArrayList<>());
+                        executor.executeRequest(new SendMessage(from, "Добро пожаловать в банду! Здесь ты можешь управлять своими долгами, а так же смотреть за их списком в нашем клане").replyMarkup(new ReplyKeyboardMarkup("Меню").resizeKeyboard(true)));
                     }
                     if (command.equals("меню")) {
-                        executor.executeRequest(new SendMessage(from, "Ищем вас в базе данных"), () -> {
-                        }, new ArrayList<>());
                         WereUser related = usersRepository.getByTelegramId(from);
                         if (related == null) {
-                            executor.executeRequest(new SendMessage(from, "Ты не зарегистрировал аккаунт!").replyMarkup(new InlineKeyboardMarkup(new InlineKeyboardButton("Привязать аккаунт").callbackData("bindAccount"))), () -> {
-                            }, new ArrayList<>());
+                            executor.executeRequest(new SendMessage(from, "Ты не зарегистрировал аккаунт!").replyMarkup(new InlineKeyboardMarkup(new InlineKeyboardButton("Привязать аккаунт").callbackData("bindAccount"))));
+                        } else {
+                            executor.executeRequest(new SendMessage(from, "Добро пожаловать, " + related.getUsername() + "\nТвоя задолженность составляет " + related.getGoldDebt() + " голды\nДоступно самоцветов для конвертирования: " + related.getFreeGems()));
                         }
                     }
                 }
