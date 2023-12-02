@@ -123,12 +123,13 @@ public class WereWorker {
         } else {
             String response = allTheQuestsSheSaid.body().string();
             allTheQuestsSheSaid.close();
+            List<WereQuest> questsFull = questRepository.getAllByInnerIdGreaterThanEqual(0);
             JsonArray quests = JsonParser.parseString(response).getAsJsonArray();
             for(JsonElement questElement:quests) {
                 JsonObject questObject = questElement.getAsJsonObject();
                 JsonObject quest = questObject.get("quest").getAsJsonObject();
                 WereQuest inDB;
-                inDB = questRepository.getByWereId(quest.get("id").getAsString());
+                inDB = questsFull.stream().filter(e -> e.getWereId().equals(quest.get("id").getAsString())).findFirst().orElse(null);
                 if(inDB==null) {
                     HashMap<WereUser, Integer> participants = getQuestParticipants(questElement);
                     WereQuest newQuest = new WereQuest().setWereId(quest.get("id").getAsString()).setParticipants(participants.keySet()
@@ -228,7 +229,7 @@ public class WereWorker {
     }
 
     private void updateLedger() throws IOException {
-        Response response = client.newCall(new Request.Builder().url(baseUrl + "/clans/" + data.getWereclan() + "/chat").get().addHeader("Authorization", getToken()).build()).execute();
+        Response response = client.newCall(new Request.Builder().url(baseUrl + "/clans/" + data.getWereclan() + "/ledger").get().addHeader("Authorization", getToken()).build()).execute();
         if(response.isSuccessful()) {
             String body = response.body().string();
             response.close();
@@ -238,6 +239,7 @@ public class WereWorker {
                 JsonObject ledgerObject = ledgerElement.getAsJsonObject();
                 if(last==null) {
                     last = ledgerObject.get("id").getAsString();
+                    if(ledgerInfo.equals(last)) return;
                     ledgerInfo = last;
                 }
                 if(ledgerObject.has("playerId")) {

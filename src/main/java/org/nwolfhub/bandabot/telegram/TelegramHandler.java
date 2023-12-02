@@ -64,13 +64,13 @@ public class TelegramHandler {
                     if (command.equals("/start")) {
                         executor.executeRequest(new SendMessage(from, "Добро пожаловать в банду! Здесь ты можешь управлять своими долгами, а так же смотреть за их списком в нашем клане").replyMarkup(new ReplyKeyboardMarkup("Меню").resizeKeyboard(true)));
                     }
-                    else if (command.equals("меню")) {
+                    else if (command.equals("меню") || command.equals("/menu")) {
                         menu(from);
                     } else if(command.equals("оплатить задолженность гемами")) {
                         WereUser updated = usersRepository.getByTelegramId(from);
                         if(updated!=null) {
                             states.put(from, "gemsExchange");
-                            executor.executeRequest(new SendMessage(from, "Для обмена доступно " + updated.getFreeGems() + ". Введите количество для перевода\n\nКурс: 1 гем - 10 золота"));
+                            executor.executeRequest(new SendMessage(from, "Для обмена доступно " + updated.getFreeGems() + " кристаллов. Введите количество для перевода\n\nКурс: 1 гем - 10 золота"));
                         } else {
                             executor.executeRequest(new SendMessage(from, "Нет привязанных игровых аккаунтов").replyMarkup(new InlineKeyboardMarkup(new InlineKeyboardButton("Привязать аккаунт").callbackData("bindAccount"))));
                         }
@@ -131,7 +131,8 @@ public class TelegramHandler {
             executor.executeRequest(new SendMessage(from, "Нет привязанных игровых аккаунтов").replyMarkup(new InlineKeyboardMarkup(new InlineKeyboardButton("Привязать аккаунт").callbackData("bindAccount"))));
         } else {
             states.put(from, "menu");
-            executor.executeRequest(new SendMessage(from, "Добро пожаловать, " + related.getUsername() + "\nТвоя задолженность составляет " + related.getGoldDebt() + " голды\nДоступно самоцветов для конвертирования: " + related.getFreeGems()).replyMarkup(buildMenuKeyboard(admins.contains(from))));
+            String debt = related.getGoldDebt()>0?"Твоя задолженность составляет " + related.getGoldDebt() + " голды":"В твоём запасе есть " + related.getGoldDebt()*-1 + " золота";
+            executor.executeRequest(new SendMessage(from, "Добро пожаловать, " + related.getUsername() + "\n" + debt + "\nДоступно самоцветов для конвертирования: " + related.getFreeGems()).replyMarkup(buildMenuKeyboard(admins.contains(from))));
         }
     }
 

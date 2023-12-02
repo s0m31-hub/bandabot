@@ -16,5 +16,6 @@ public interface QuestRepository extends CrudRepository<WereQuest, Integer> {
     List<WereQuest> getAllByParticipantsContaining(WereUser user);
     WereQuest getByInnerId(Integer id);
     WereQuest getByWereId(String wereId);
+    List<WereQuest> getAllByInnerIdGreaterThanEqual(Integer innerId);
 
 }
