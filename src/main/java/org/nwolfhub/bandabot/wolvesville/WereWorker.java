@@ -103,7 +103,7 @@ public class WereWorker {
             JsonObject quest = questObject.get("quest").getAsJsonObject();
             WereQuest inDB = questRepository.getByWereId(quest.get("id").getAsString());
             if(inDB==null) {
-                executor.executeRequestNoQueue(new SendPhoto(executor.mainChat, quest.get("promoImageUrl").getAsString()).caption("Мы начали новый квест!\n\nПрошу всех участников внести 600 золота в казну. Так же напоминаю про норму в 4500 опыта"));
+                executor.executeRequestNoQueue(new SendPhoto(executor.mainChat, quest.get("promoImageUrl").getAsString()).caption("Мы начали новый квест!"));
                 HashMap<WereUser, Integer> participants = getQuestParticipants(questElement);
                 WereQuest newQuest = new WereQuest().setWereId(quest.get("id").getAsString()).setParticipants(participants.keySet().stream().toList()).setPreviewUrl(quest.get("promoImageUrl").getAsString());
                 participants.keySet().forEach(e -> e.addDebt(600));
@@ -131,7 +131,9 @@ public class WereWorker {
                 inDB = questRepository.getByWereId(quest.get("id").getAsString());
                 if(inDB==null) {
                     HashMap<WereUser, Integer> participants = getQuestParticipants(questElement);
-                    WereQuest newQuest = new WereQuest().setWereId(quest.get("id").getAsString()).setParticipants(participants.keySet().stream().toList()).setPreviewUrl(quest.get("promoImageUrl").getAsString());
+                    WereQuest newQuest = new WereQuest().setWereId(quest.get("id").getAsString()).setParticipants(participants.keySet()
+                            .stream()
+                            .toList()).setPreviewUrl(quest.get("promoImageUrl").getAsString());
                     participants.keySet().forEach(e -> e.addDebt(600));
                     for(WereUser participant:participants.keySet()) {
                         int debtMultiplier = participants.get(participant)/1000;
