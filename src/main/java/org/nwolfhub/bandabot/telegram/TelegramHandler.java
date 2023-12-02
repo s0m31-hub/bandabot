@@ -3,10 +3,7 @@ package org.nwolfhub.bandabot.telegram;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Update;
-import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
-import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
-import com.pengrad.telegrambot.model.request.ParseMode;
-import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
+import com.pengrad.telegrambot.model.request.*;
 import com.pengrad.telegrambot.request.AnswerCallbackQuery;
 import com.pengrad.telegrambot.request.SendMessage;
 import org.nwolfhub.bandabot.database.model.WereUser;
@@ -29,6 +26,9 @@ public class TelegramHandler {
     private final HashMap<String, Long> bindCodes;
     private final QuestRepository questRepository;
     private final UsersRepository usersRepository;
+
+    private final List<WereUser> loadedUsers = new ArrayList<>();
+    private final HashMap<String, String> states = new HashMap<>();
 
 
     public TelegramHandler(TelegramBot bot, QueueExecutor executor, List<Long> admins, HashMap<String, Long> bindCodes, QuestRepository questRepository, UsersRepository usersRepository) {
@@ -65,8 +65,11 @@ public class TelegramHandler {
                         if (related == null) {
                             executor.executeRequest(new SendMessage(from, "Ты не зарегистрировал аккаунт!").replyMarkup(new InlineKeyboardMarkup(new InlineKeyboardButton("Привязать аккаунт").callbackData("bindAccount"))));
                         } else {
-                            executor.executeRequest(new SendMessage(from, "Добро пожаловать, " + related.getUsername() + "\nТвоя задолженность составляет " + related.getGoldDebt() + " голды\nДоступно самоцветов для конвертирования: " + related.getFreeGems()));
+                            executor.executeRequest(new SendMessage(from, "Добро пожаловать, " + related.getUsername() + "\nТвоя задолженность составляет " + related.getGoldDebt() + " голды\nДоступно самоцветов для конвертирования: " + related.getFreeGems()).replyMarkup(buildMenuKeyboard(admins.contains(from))));
                         }
+                    } if(command.equals("оплатить задолженность гемами")) {
+                        WereUser updated = usersRepository.getByTelegramId(from);
+
                     }
                 }
             }
@@ -85,5 +88,10 @@ public class TelegramHandler {
                 }
             }
         }
+    }
+
+    private ReplyKeyboardMarkup buildMenuKeyboard(Boolean admin) {
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[] {new KeyboardButton("Оплатить задолженность гемами")}, new KeyboardButton[]{new KeyboardButton("Список должников")});
+        return markup;
     }
 }
