@@ -1,10 +1,7 @@
 package org.nwolfhub.bandabot.telegram.requests;
 
 import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.request.AnswerCallbackQuery;
-import com.pengrad.telegrambot.request.EditMessageReplyMarkup;
-import com.pengrad.telegrambot.request.SendMessage;
-import com.pengrad.telegrambot.request.SendPhoto;
+import com.pengrad.telegrambot.request.*;
 import com.pengrad.telegrambot.response.SendResponse;
 import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Component;
@@ -50,7 +47,7 @@ public class QueueExecutor {
     public void executeRequestNoQueue(AnswerCallbackQuery request) {
         bot.execute(request);
     }
-    public void executeRequestNoQueue(EditMessageReplyMarkup request) {
+    public void executeRequestNoQueue(EditMessageText request) {
         bot.execute(request);
     }
 

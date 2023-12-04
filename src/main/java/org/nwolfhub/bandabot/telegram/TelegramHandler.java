@@ -6,6 +6,7 @@ import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.request.*;
 import com.pengrad.telegrambot.request.AnswerCallbackQuery;
 import com.pengrad.telegrambot.request.EditMessageReplyMarkup;
+import com.pengrad.telegrambot.request.EditMessageText;
 import com.pengrad.telegrambot.request.SendMessage;
 import org.nwolfhub.bandabot.database.model.WereUser;
 import org.nwolfhub.bandabot.database.repositories.QuestRepository;
@@ -148,10 +149,11 @@ public class TelegramHandler {
             } else if(text.equals("menu")) {
                 menu(from);
             } else if(text.contains("adminPanelMembersNext")) {
-                executor.executeRequestNoQueue(new EditMessageReplyMarkup(update.callbackQuery().from().id(), update.callbackQuery().message().messageId()).replyMarkup(buildAdminMembersList(Integer.parseInt(text.split("adminPanelMembersNext")[1]) + 44)));
-
+                executor.executeRequestNoQueue(new EditMessageText(update.callbackQuery().from().id(), update.callbackQuery().message().messageId(), "Список участников (страница " + ((Integer.parseInt(text.split("adminPanelMembersNext")[1]) + 44)/44+1) + ")")
+                        .replyMarkup(buildAdminMembersList(Integer.parseInt(text.split("adminPanelMembersNext")[1]) + 44)));
             } else if(text.contains("adminPanelMembersPrev")) {
-                executor.executeRequestNoQueue(new EditMessageReplyMarkup(update.callbackQuery().from().id(), update.callbackQuery().message().messageId()).replyMarkup(buildAdminMembersList(Integer.parseInt(text.split("adminPanelMembersPrev")[1]) - 44)));
+                executor.executeRequestNoQueue(new EditMessageText(update.callbackQuery().from().id(), update.callbackQuery().message().messageId(), "Список участников (страница " + ((Integer.parseInt(text.split("adminPanelMembersPrev")[1]) - 44)/44+1) + ")")
+                        .replyMarkup(buildAdminMembersList(Integer.parseInt(text.split("adminPanelMembersPrev")[1]) - 44)));
             } else {
                 if(text.contains("gemtrade")) {
                     WereUser related = usersRepository.getByTelegramId(from);
@@ -209,7 +211,7 @@ public class TelegramHandler {
             }
         }
         if (offset > 0) {
-            if(lastI<inDebt.size()) {
+            if(lastI+1<inDebt.size()) {
                 markup.addRow(new InlineKeyboardButton("Назад").callbackData("adminPanelMembersPrev" + offset),
                         new InlineKeyboardButton("Меню").callbackData("menu"),
                         new InlineKeyboardButton("Дальше").callbackData("adminPanelMembersNext" + offset));
