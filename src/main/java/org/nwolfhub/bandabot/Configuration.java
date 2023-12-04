@@ -2,7 +2,6 @@ package org.nwolfhub.bandabot;
 
 import com.pengrad.telegrambot.TelegramBot;
 import org.nwolfhub.bandabot.wolvesville.ClanData;
-import org.nwolfhub.bandabot.wolvesville.WereWorker;
 import org.nwolfhub.utils.Configurator;
 import org.nwolfhub.utils.Utils;
 import org.springframework.context.annotation.Bean;
@@ -68,8 +67,8 @@ public class Configuration {
         return new TelegramBot(configurator.getValue("telegram_token"));
     }
     @Bean
-    public List<Long> adminsList() {
-        return new ArrayList<>(Arrays.stream(configurator.getValue("admins").split(",")).map(Long::valueOf).toList());
+    public Configurator configurator() {
+        return configurator;
     }
     @Bean
     public ClanData clanData() {
@@ -82,7 +81,7 @@ public class Configuration {
     @Bean
     public HashMap<String, Long> getBindCodes() {
         return bindMap;
-    };
+    }
 
     private Properties additionalProperties() {
         Properties properties = new Properties();

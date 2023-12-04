@@ -5,17 +5,18 @@ import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.request.*;
 import com.pengrad.telegrambot.request.AnswerCallbackQuery;
+import com.pengrad.telegrambot.request.EditMessageReplyMarkup;
 import com.pengrad.telegrambot.request.SendMessage;
 import org.nwolfhub.bandabot.database.model.WereUser;
 import org.nwolfhub.bandabot.database.repositories.QuestRepository;
 import org.nwolfhub.bandabot.database.repositories.UsersRepository;
 import org.nwolfhub.bandabot.telegram.requests.QueueExecutor;
+import org.nwolfhub.bandabot.wolvesville.ClanData;
+import org.nwolfhub.utils.Configurator;
 import org.nwolfhub.utils.Utils;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 @Component
 public class TelegramHandler {
@@ -26,15 +27,19 @@ public class TelegramHandler {
     private final HashMap<String, Long> bindCodes;
     private final QuestRepository questRepository;
     private final UsersRepository usersRepository;
+    private final ClanData data;
 
     private final List<WereUser> loadedUsers = new ArrayList<>();
     private final HashMap<Long, String> states = new HashMap<>();
+    private final List<String> replies = List.of("Кто это тут плохой мальчик?", "Ой, это же ты!", "Кто это тут не платит налоги?",
+            "Ты думал, что сможешь спрятаться?", "Уж кто кто, а ты то почему здесь...", "You did that! You!");
 
 
-    public TelegramHandler(TelegramBot bot, QueueExecutor executor, List<Long> admins, HashMap<String, Long> bindCodes, QuestRepository questRepository, UsersRepository usersRepository) {
+    public TelegramHandler(TelegramBot bot, QueueExecutor executor, Configurator configurator, HashMap<String, Long> bindCodes, QuestRepository questRepository, UsersRepository usersRepository, ClanData data) {
         this.bot = bot;
         this.executor = executor;
-        this.admins = admins;
+        this.admins = new ArrayList<>(Arrays.stream(configurator.getValue("admins").split(",")).map(Long::valueOf).toList());
+        this.data = data;
         this.bindCodes = bindCodes;
         this.questRepository = questRepository;
         this.usersRepository = usersRepository;
@@ -74,7 +79,44 @@ public class TelegramHandler {
                         } else {
                             executor.executeRequest(new SendMessage(from, "Нет привязанных игровых аккаунтов").replyMarkup(new InlineKeyboardMarkup(new InlineKeyboardButton("Привязать аккаунт").callbackData("bindAccount"))));
                         }
-                    } else {
+                    } else if(command.equals("список должников")) {
+                        List<WereUser> inDebt = usersRepository.getAllByGoldDebtGreaterThanEqualAndInClan(1, true);
+                        if (inDebt.isEmpty()) {
+                            executor.executeRequest(new SendMessage(from, "Вертрудо всех сильно попинал: должников нет!"));
+                        } else {
+                            StringBuilder badGuys = new StringBuilder();
+                            inDebt.sort(Comparator.comparing(WereUser::getGoldDebt));
+                            Collections.reverse(inDebt);
+                            for (WereUser wereUser : inDebt) {
+                                if (!badGuys.isEmpty()) {
+                                    badGuys.append("\n");
+                                }
+                                badGuys.append(wereUser.getUsername()).append(": ").append(wereUser.getGoldDebt()).append(" золота");
+                                if (wereUser.getTelegramId() != null && wereUser.getTelegramId().equals(from))
+                                    badGuys.append(" (").append(replies.get(new Random().nextInt(replies.size()))).append(")");
+                            }
+                            executor.executeRequest(new SendMessage(from, badGuys.toString()));
+                        }
+                    } else if(command.equals("админ панель")) {
+                        if(admins.contains(from)) {
+                            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new String[] {"Отключить участия"}, new String[]{"Управление участниками"}, new String[]{"debug prompt"}, new String[]{"Меню"}).resizeKeyboard(true);
+                            String textToSend = "Добро пожаловать в панель администратора!\n\nПояснения функций:\n\nОтключить участия - автоматически убирает участие " +
+                                    "в квестах у игроков с долгом больше указанного\n\n" +
+                                    "Управление участниками - изменение долга/участия конкретного игрока\n\n" +
+                                    "Debug prompt - cli-интерфейс с кучей возможностей. Не должен пригодиться за пределами разработки";
+                            executor.executeRequest(new SendMessage(from, textToSend).replyMarkup(markup));
+                        }
+                    } else if(command.equals("отключить участия")) {
+                        if(admins.contains(from)) {
+                            states.put(from, "toggleOff");
+                            executor.executeRequest(new SendMessage(from, "Укажи порог золота"));
+                        }
+                    } else if(command.equals("управление участниками")) {
+                        if(admins.contains(from)) {
+                            executor.executeRequest(new SendMessage(from, "Список участников (страница 1)").replyMarkup(buildAdminMembersList(0)));
+                        }
+                    }
+                    else {
                         if(states.get(from)!=null && states.get(from).equals("gemsExchange")) {
                             try {
                                 int amount = Integer.parseInt(command);
@@ -105,6 +147,11 @@ public class TelegramHandler {
                 }
             } else if(text.equals("menu")) {
                 menu(from);
+            } else if(text.contains("adminPanelMembersNext")) {
+                executor.executeRequestNoQueue(new EditMessageReplyMarkup(update.callbackQuery().from().id(), update.callbackQuery().message().messageId()).replyMarkup(buildAdminMembersList(Integer.parseInt(text.split("adminPanelMembersNext")[1]) + 44)));
+
+            } else if(text.contains("adminPanelMembersPrev")) {
+                executor.executeRequestNoQueue(new EditMessageReplyMarkup(update.callbackQuery().from().id(), update.callbackQuery().message().messageId()).replyMarkup(buildAdminMembersList(Integer.parseInt(text.split("adminPanelMembersPrev")[1]) - 44)));
             } else {
                 if(text.contains("gemtrade")) {
                     WereUser related = usersRepository.getByTelegramId(from);
@@ -139,6 +186,41 @@ public class TelegramHandler {
     private ReplyKeyboardMarkup buildMenuKeyboard(Boolean admin) {
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[] {new KeyboardButton("Оплатить задолженность гемами")}, new KeyboardButton[]{new KeyboardButton("Список должников")}).resizeKeyboard(true);
         if(admin) markup.addRow(new KeyboardButton("Админ панель"));
+        return markup;
+    }
+
+    private InlineKeyboardMarkup buildAdminMembersList(Integer offset) {
+        List<WereUser> inDebt = usersRepository.getAllByInClan(true);
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        InlineKeyboardButton[] lastRow;
+        int lastI=0;
+        for(int i = offset; i<inDebt.size(); i+=2) {
+            lastI=i;
+            if(i>44+offset) {
+                break;
+            } else {
+                if (i + 1 < inDebt.size()) {
+                    lastRow = new InlineKeyboardButton[]{new InlineKeyboardButton(inDebt.get(i).getUsername()).callbackData("adminPanelMember" + inDebt.get(i).getWereId()),
+                            new InlineKeyboardButton(inDebt.get(i + 1).getUsername()).callbackData("adminPanelMember" + inDebt.get(i + 1).getWereId())};
+                } else {
+                    lastRow = new InlineKeyboardButton[]{new InlineKeyboardButton(inDebt.get(i).getUsername()).callbackData("adminPanelMember" + inDebt.get(i).getWereId())};
+                }
+                markup.addRow(lastRow);
+            }
+        }
+        if (offset > 0) {
+            if(lastI<inDebt.size()) {
+                markup.addRow(new InlineKeyboardButton("Назад").callbackData("adminPanelMembersPrev" + offset),
+                        new InlineKeyboardButton("Меню").callbackData("menu"),
+                        new InlineKeyboardButton("Дальше").callbackData("adminPanelMembersNext" + offset));
+            } else {
+                markup.addRow(new InlineKeyboardButton("Назад").callbackData("adminPanelMembersPrev" + offset),
+                        new InlineKeyboardButton("Меню").callbackData("menu"));
+            }
+        } else {
+            markup.addRow(new InlineKeyboardButton("Меню").callbackData("menu"),
+                    new InlineKeyboardButton("Дальше").callbackData("adminPanelMembersNext" + offset));
+        }
         return markup;
     }
 }

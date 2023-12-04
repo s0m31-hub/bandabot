@@ -15,4 +15,6 @@ public interface UsersRepository extends CrudRepository<WereUser, Integer> {
     List<WereUser> getAllByWereIdIn(List<String> wereids);
     WereUser getById(Integer id);
     WereUser getByTelegramId(Long telegramId);
+    List<WereUser> getAllByGoldDebtGreaterThanEqualAndInClan(Integer goldDebt, Boolean inClan);
+    List<WereUser> getAllByInClan(Boolean inClan);
 }

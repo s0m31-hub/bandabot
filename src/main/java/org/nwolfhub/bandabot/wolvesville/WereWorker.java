@@ -93,8 +93,13 @@ public class WereWorker {
         Response allTheQuestsSheSaid = client.newCall(new Request.Builder().url(baseUrl + "/clans/" + data.getWereclan() + "/quests/active")
                 .addHeader("Authorization", getToken()).build()).execute();
         if(!allTheQuestsSheSaid.isSuccessful()) {
+            int code = allTheQuestsSheSaid.code();
             allTheQuestsSheSaid.close();
-            System.out.println("Failed to get current quest info");
+            if(code==404) {
+                //IDK what to put here for now
+            } else {
+                System.out.println("Failed to get current quest info");
+            }
         } else {
             String response = allTheQuestsSheSaid.body().string();
             allTheQuestsSheSaid.close();
