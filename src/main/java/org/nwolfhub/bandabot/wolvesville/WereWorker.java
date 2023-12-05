@@ -33,7 +33,7 @@ public class WereWorker {
     private final UsersRepository usersRepository;
     private final QuestRepository questRepository;
     private volatile OkHttpClient client;
-    private static final String baseUrl = "https://api.wolvesville.com";
+    public static final String baseUrl = "https://api.wolvesville.com";
     private ClanData data;
     private final HashMap<String, Long> bindCodes;
 

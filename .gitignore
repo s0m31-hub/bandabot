@@ -32,5 +32,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
 banda.cfg
 runtime.info
+*banda.cfg
+ledger.txt

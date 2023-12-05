@@ -1,5 +1,7 @@
 package org.nwolfhub.bandabot.telegram;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Update;
@@ -8,15 +10,21 @@ import com.pengrad.telegrambot.request.AnswerCallbackQuery;
 import com.pengrad.telegrambot.request.EditMessageReplyMarkup;
 import com.pengrad.telegrambot.request.EditMessageText;
 import com.pengrad.telegrambot.request.SendMessage;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import org.nwolfhub.bandabot.database.model.WereQuest;
 import org.nwolfhub.bandabot.database.model.WereUser;
 import org.nwolfhub.bandabot.database.repositories.QuestRepository;
 import org.nwolfhub.bandabot.database.repositories.UsersRepository;
 import org.nwolfhub.bandabot.telegram.requests.QueueExecutor;
 import org.nwolfhub.bandabot.wolvesville.ClanData;
+import org.nwolfhub.bandabot.wolvesville.WereWorker;
 import org.nwolfhub.utils.Configurator;
 import org.nwolfhub.utils.Utils;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.*;
 
 @Component
@@ -34,6 +42,7 @@ public class TelegramHandler {
     private final HashMap<Long, String> states = new HashMap<>();
     private final List<String> replies = List.of("Кто это тут плохой мальчик?", "Ой, это же ты!", "Кто это тут не платит налоги?",
             "Ты думал, что сможешь спрятаться?", "Уж кто кто, а ты то почему здесь...", "You did that! You!");
+    private final OkHttpClient client = new OkHttpClient();
 
 
     public TelegramHandler(TelegramBot bot, QueueExecutor executor, Configurator configurator, HashMap<String, Long> bindCodes, QuestRepository questRepository, UsersRepository usersRepository, ClanData data) {
@@ -49,11 +58,13 @@ public class TelegramHandler {
     public void startListening() {
         bot.setUpdatesListener(list -> {
             for (Update update : list) {
-                try {
-                    onUpdate(update);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                new Thread(() -> {
+                    try {
+                        onUpdate(update);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }).start();
             }
             return UpdatesListener.CONFIRMED_UPDATES_ALL;
         });
@@ -115,6 +126,7 @@ public class TelegramHandler {
                     } else if(command.equals("управление участниками")) {
                         if(admins.contains(from)) {
                             executor.executeRequest(new SendMessage(from, "Список участников (страница 1)").replyMarkup(buildAdminMembersList(0)));
+                            states.put(from, "adminPanelMembersO0");
                         }
                     }
                     else {
@@ -149,11 +161,60 @@ public class TelegramHandler {
             } else if(text.equals("menu")) {
                 menu(from);
             } else if(text.contains("adminPanelMembersNext")) {
-                executor.executeRequestNoQueue(new EditMessageText(update.callbackQuery().from().id(), update.callbackQuery().message().messageId(), "Список участников (страница " + ((Integer.parseInt(text.split("adminPanelMembersNext")[1]) + 44)/44+1) + ")")
-                        .replyMarkup(buildAdminMembersList(Integer.parseInt(text.split("adminPanelMembersNext")[1]) + 44)));
+                if(admins.contains(from)) {
+                    executor.executeRequestNoQueue(new EditMessageText(update.callbackQuery().from().id(), update.callbackQuery().message().messageId(), "Список участников (страница " + ((Integer.parseInt(text.split("adminPanelMembersNext")[1]) + 44) / 44 + 1) + ")")
+                            .replyMarkup(buildAdminMembersList(Integer.parseInt(text.split("adminPanelMembersNext")[1]) + 44)));
+                    states.put(from, "adminPanelMembersO" + Integer.parseInt(text.split("adminPanelMembersNext")[1]) + 44);
+                }
+                else reportAdminAccess(update);
             } else if(text.contains("adminPanelMembersPrev")) {
-                executor.executeRequestNoQueue(new EditMessageText(update.callbackQuery().from().id(), update.callbackQuery().message().messageId(), "Список участников (страница " + ((Integer.parseInt(text.split("adminPanelMembersPrev")[1]) - 44)/44+1) + ")")
-                        .replyMarkup(buildAdminMembersList(Integer.parseInt(text.split("adminPanelMembersPrev")[1]) - 44)));
+                if (admins.contains(from)) {
+                    executor.executeRequestNoQueue(new EditMessageText(update.callbackQuery().from().id(), update.callbackQuery().message().messageId(), "Список участников (страница " + ((Integer.parseInt(text.split("adminPanelMembersPrev")[1]) - 44) / 44 + 1) + ")")
+                            .replyMarkup(buildAdminMembersList(Integer.parseInt(text.split("adminPanelMembersPrev")[1]) - 44)));
+                    states.put(from, "adminPanelMembersO" + (Integer.parseInt(text.split("adminPanelMembersPrev")[1]) - 44));
+                }
+                else reportAdminAccess(update);
+            } else if(text.contains("adminPanelMember")) {
+                if(admins.contains(from)) {
+                    String wereId = text.split("adminPanelMember")[1];
+                    executor.executeRequestNoQueue(new AnswerCallbackQuery(id).text("Получение информации об участнике"));
+                    WereUser wereUser = usersRepository.getByWereId(wereId);
+                    List<WereQuest> participated = questRepository.getAllByParticipantsContaining(wereUser);
+                    try {
+                        Response response = client.newCall(new Request.Builder().url(WereWorker.baseUrl + "/clans/" + data.getWereclan() + "/members/" + wereUser.getWereId()).get().addHeader("Authorization", "Bot " + data.getWeretoken()).build()).execute();
+                        if(!response.isSuccessful()) {
+                            executor.executeRequestNoQueue(new EditMessageText(from, update.callbackQuery().message().messageId(), "Сервер выдал ошибку"));
+                            executor.executeRequest(new SendMessage(from, response.body().string()));
+                            response.close();
+                        } else {
+                            String body = response.body().string();
+                            response.close();
+                            JsonObject memberObject = JsonParser.parseString(body).getAsJsonObject();
+                            Boolean participatesInQuest = memberObject.get("participateInClanQuests").getAsBoolean();
+                            String toSend = """
+                                    Участник {username}
+                                    
+                                    Задолженность: {debt}
+                                    Доступные кристаллы: {gems}
+                                    Стоит галочка участия? {quest_participate}
+                                    Принял участие в {quest_amount} квестах
+                                    """;
+                            if(wereUser.getTelegramId()!=null) {
+                                toSend+="У пользователя привязан Телеграм аккаунт. ID: " + wereUser.getTelegramId();
+                            }
+                            executor.executeRequestNoQueue(new EditMessageText(from, update.callbackQuery().message().messageId(), toSend
+                                    .replace("{username}", wereUser.getUsername())
+                                    .replace("{debt}", wereUser.getGoldDebt().toString())
+                                    .replace("{gems}", wereUser.getFreeGems().toString())
+                                    .replace("{quest_participate}", (participatesInQuest?"Да":"Нет"))
+                                    .replace("{quest_amount}", participated.size() + ""))
+                                    .replyMarkup(buildMemberKeyboard(wereUser, from)));
+                        }
+                    } catch (IOException e) {
+                        executor.executeRequestNoQueue(new EditMessageText(from, update.callbackQuery().message().messageId(), "Не удалось связаться с серверами wolvesville"));
+                        executor.executeRequest(new SendMessage(from, e.toString()));
+                    }
+                } else reportAdminAccess(update);
             } else {
                 if(text.contains("gemtrade")) {
                     WereUser related = usersRepository.getByTelegramId(from);
@@ -211,7 +272,7 @@ public class TelegramHandler {
             }
         }
         if (offset > 0) {
-            if(lastI+1<inDebt.size()) {
+            if(lastI+3<inDebt.size()) {
                 markup.addRow(new InlineKeyboardButton("Назад").callbackData("adminPanelMembersPrev" + offset),
                         new InlineKeyboardButton("Меню").callbackData("menu"),
                         new InlineKeyboardButton("Дальше").callbackData("adminPanelMembersNext" + offset));
@@ -223,6 +284,20 @@ public class TelegramHandler {
             markup.addRow(new InlineKeyboardButton("Меню").callbackData("menu"),
                     new InlineKeyboardButton("Дальше").callbackData("adminPanelMembersNext" + offset));
         }
+        return markup;
+    }
+
+    private void reportAdminAccess(Update update) {
+        for(Long adminId:admins) {
+            executor.executeRequest(new SendMessage(adminId, "Странный доступ к админ панели: " + update));
+        }
+    }
+    private InlineKeyboardMarkup buildMemberKeyboard(WereUser member, Long from) {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.addRow(new InlineKeyboardButton("Изменить долг").callbackData("adminChangeDebt" + member.getWereId()))
+                .addRow(new InlineKeyboardButton("Изменить самоцветы").callbackData("adminChangeGems" + member.getWereId()))
+                .addRow(new InlineKeyboardButton("Изменить участие").callbackData("adminChangeParticipate" + member.getWereId()))
+                .addRow(new InlineKeyboardButton("Назад").callbackData("adminPanelMembersNext" + (Integer.parseInt((states.get(from)==null?"adminPanelMembersO0":states.get(from)).split("adminPanelMembersO")[1])-44)));
         return markup;
     }
 }
