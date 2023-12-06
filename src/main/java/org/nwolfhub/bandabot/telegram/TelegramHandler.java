@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
+import com.pengrad.telegrambot.model.CallbackQuery;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.request.*;
 import com.pengrad.telegrambot.request.AnswerCallbackQuery;
@@ -12,6 +13,7 @@ import com.pengrad.telegrambot.request.EditMessageText;
 import com.pengrad.telegrambot.request.SendMessage;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.nwolfhub.bandabot.database.model.WereQuest;
 import org.nwolfhub.bandabot.database.model.WereUser;
@@ -130,17 +132,49 @@ public class TelegramHandler {
                         }
                     }
                     else {
-                        if(states.get(from)!=null && states.get(from).equals("gemsExchange")) {
-                            try {
-                                int amount = Integer.parseInt(command);
-                                if(amount>0) {
-                                    executor.executeRequest(new SendMessage(from, "Обмен " + amount + " кристаллов на " + amount*10 + " золота").replyMarkup(new InlineKeyboardMarkup(new InlineKeyboardButton[]{new InlineKeyboardButton("Подтвердить").callbackData("gemtrade" + amount)},
-                                            new InlineKeyboardButton[]{new InlineKeyboardButton("Отмена").callbackData("menu")})));
-                                }
-                            } catch (NumberFormatException e) {
-                                executor.executeRequest(new SendMessage(from, "Не похоже на число"));
-                            }
-                            states.put(from, "menu");
+                        if(states.get(from)!=null) {
+                             if(states.get(from).equals("gemsExchange")) {
+                                 try {
+                                     int amount = Integer.parseInt(command);
+                                     if (amount > 0) {
+                                         executor.executeRequest(new SendMessage(from, "Обмен " + amount + " кристаллов на " + amount * 10 + " золота").replyMarkup(new InlineKeyboardMarkup(new InlineKeyboardButton[]{new InlineKeyboardButton("Подтвердить").callbackData("gemtrade" + amount)},
+                                                 new InlineKeyboardButton[]{new InlineKeyboardButton("Отмена").callbackData("menu")})));
+                                     }
+                                 } catch (NumberFormatException e) {
+                                     executor.executeRequest(new SendMessage(from, "Не похоже на число"));
+                                 }
+                                 states.put(from, "menu");
+                             } else if(states.get(from).contains("changingDebt")) {
+                                 if(admins.contains(from)) {
+                                     String wereId = states.get(from).split("changingDebt")[1];
+                                     WereUser wereUser = usersRepository.getByWereId(wereId);
+                                     Boolean summing = command.contains("s");
+                                     if(summing) command = command.substring(1);
+                                     try {
+                                         Integer amount = Integer.valueOf(command);
+                                         if(summing) wereUser.addDebt(amount); else wereUser.setGoldDebt(amount);
+                                         usersRepository.save(wereUser);
+                                         executor.executeRequest(new SendMessage(from, "Долг человека успешно изменён (новый: " + wereUser.getGoldDebt() + ")").replyMarkup(buildMemberKeyboard(wereUser, from, 0)));
+                                     } catch (NumberFormatException e) {
+                                         executor.executeRequest(new SendMessage(from, "Не похоже на число"));
+                                     }
+                                 } else reportAdminAccess(update);
+                             } else if(states.get(from).contains("changingGems")) {
+                                 if(admins.contains(from)) {
+                                     String wereId = states.get(from).split("changingGems")[1];
+                                     WereUser wereUser = usersRepository.getByWereId(wereId);
+                                     Boolean summing = command.contains("s");
+                                     if(summing) command = command.substring(1);
+                                     try {
+                                         Integer amount = Integer.valueOf(command);
+                                         if(summing) wereUser.addGems(amount); else wereUser.setFreeGems(amount);
+                                         usersRepository.save(wereUser);
+                                         executor.executeRequest(new SendMessage(from, "Кристаллы человека успешно изменены (новое число: " + wereUser.getFreeGems() + ")").replyMarkup(buildMemberKeyboard(wereUser, from, 0)));
+                                     } catch (NumberFormatException e) {
+                                         executor.executeRequest(new SendMessage(from, "Не похоже на число"));
+                                     }
+                                 } else reportAdminAccess(update);
+                             }
                         }
                     }
                 }
@@ -208,13 +242,43 @@ public class TelegramHandler {
                                     .replace("{gems}", wereUser.getFreeGems().toString())
                                     .replace("{quest_participate}", (participatesInQuest?"Да":"Нет"))
                                     .replace("{quest_amount}", participated.size() + ""))
-                                    .replyMarkup(buildMemberKeyboard(wereUser, from)));
+                                    .replyMarkup(buildMemberKeyboard(wereUser, from, -1)));
                         }
                     } catch (IOException e) {
                         executor.executeRequestNoQueue(new EditMessageText(from, update.callbackQuery().message().messageId(), "Не удалось связаться с серверами wolvesville"));
                         executor.executeRequest(new SendMessage(from, e.toString()));
                     }
                 } else reportAdminAccess(update);
+            } else if(text.contains("adminChangeDebt")) {
+                String wereId = text.split("adminChangeDebt")[1];
+                states.put(from, "changingDebt" + wereId);
+                executor.executeRequest(new SendMessage(from, "Укажите новый долг человека\n\nОтрицательный долг интерпретируется как запас\nДля того, чтобы прибавить к текущему долгу число, добавьте s перед сообщением (К примеру: s300 добавит человеку 300 голды в долг, s-400 уберёт 400)"));
+            } else if(text.contains("adminChangeGems")) {
+                String wereId = text.split("adminChangeGems")[1];
+                states.put(from, "changingGems" + wereId);
+                executor.executeRequest(new SendMessage(from, "Укажите новое количество свободных для обмена кристаллов человека\n\nДля того, чтобы прибавить к текущему количеству число, добавьте s перед сообщением (К примеру: s300 добавит человеку 300 кристаллов человеку, s-400 уберёт 400)"));
+            } else if(text.contains("adminExchangeGems")) {
+                String wereId = text.split("adminExchangeGems")[1];
+                states.put(from, "exchangingGems" + wereId);
+                executor.executeRequest(new SendMessage(from, "Укажите какое количество кристаллов стоит обменять на золото"));
+            } else if(text.contains("adminChangeParticipate")) {
+                String wereId = text.split("adminChangeParticipate")[1];
+                try {
+                    Response response = client.newCall(new Request.Builder().url(WereWorker.baseUrl + "/clans/" + data.getWereclan() + "/members/" + wereId).get().addHeader("Authorization", "Bot " + data.getWeretoken()).build()).execute();
+                    if(response.isSuccessful()) {
+                        String body = response.body().string();
+                        response.close();
+                        JsonObject memberObject = JsonParser.parseString(body).getAsJsonObject();
+                        Boolean participatesInQuest = memberObject.get("participateInClanQuests").getAsBoolean();
+                        Response response1 = client.newCall(new Request.Builder().url(WereWorker.baseUrl + "/clans/" + data.getWereclan() + "/members/" + wereId + "/participateInQuests").put(RequestBody.create(("{\"participateInQuests\":" + !participatesInQuest + "}").getBytes())).addHeader("Authorization", "Bot " + data.getWeretoken()).build()).execute();
+                        if(response1.isSuccessful()) executor.executeRequestNoQueue(new AnswerCallbackQuery(id).text("Статус успешно изменён на " + !participatesInQuest).showAlert(true));
+                        else executor.executeRequestNoQueue(new AnswerCallbackQuery(id).text("Не удалось изменить статус").showAlert(true));
+                    } else {
+                        executor.executeRequest(new SendMessage(from, "Сервер вернул неверный ответ"));
+                    }
+                } catch (IOException e) {
+                    executor.executeRequest(new SendMessage(from, e.toString()));
+                }
             } else {
                 if(text.contains("gemtrade")) {
                     WereUser related = usersRepository.getByTelegramId(from);
@@ -254,6 +318,7 @@ public class TelegramHandler {
 
     private InlineKeyboardMarkup buildAdminMembersList(Integer offset) {
         List<WereUser> inDebt = usersRepository.getAllByInClan(true);
+        inDebt.sort(Comparator.comparing(e -> ((int) e.getUsername().toCharArray()[0])));
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         InlineKeyboardButton[] lastRow;
         int lastI=0;
@@ -292,12 +357,13 @@ public class TelegramHandler {
             executor.executeRequest(new SendMessage(adminId, "Странный доступ к админ панели: " + update));
         }
     }
-    private InlineKeyboardMarkup buildMemberKeyboard(WereUser member, Long from) {
+    private InlineKeyboardMarkup buildMemberKeyboard(WereUser member, Long from, int manualOffset) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         markup.addRow(new InlineKeyboardButton("Изменить долг").callbackData("adminChangeDebt" + member.getWereId()))
                 .addRow(new InlineKeyboardButton("Изменить самоцветы").callbackData("adminChangeGems" + member.getWereId()))
+                .addRow(new InlineKeyboardButton("Обменять самоцветы").callbackData("adminExchangeGems" + member.getWereId()))
                 .addRow(new InlineKeyboardButton("Изменить участие").callbackData("adminChangeParticipate" + member.getWereId()))
-                .addRow(new InlineKeyboardButton("Назад").callbackData("adminPanelMembersNext" + (Integer.parseInt((states.get(from)==null?"adminPanelMembersO0":states.get(from)).split("adminPanelMembersO")[1])-44)));
+                .addRow(new InlineKeyboardButton("Назад").callbackData("adminPanelMembersNext" + (manualOffset!=-1?manualOffset:(Integer.parseInt((states.get(from)==null?"adminPanelMembersO0":states.get(from)).split("adminPanelMembersO")[1])-44))));
         return markup;
     }
 }
